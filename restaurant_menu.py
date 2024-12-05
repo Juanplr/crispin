@@ -27,8 +27,8 @@ class ProductCard(QFrame):
             }
         """)
         self.name = name
-        self.price = float(price)  # Asegurarse de que el precio sea un número flotante
-        self.add_to_cart_callback = add_to_cart_callback  # Callback para agregar al carrito
+        self.price = float(price)  
+        self.add_to_cart_callback = add_to_cart_callback 
         
         self.setFixedWidth(400)
         
@@ -99,9 +99,9 @@ class RestaurantMenu(QMainWindow):
             }
         """)
 
-        # Lista de productos seleccionados
-        self.cart = []  # Aquí almacenamos los productos seleccionados (nombre y precio)
-        self.total = 0.0  # Total inicial
+   
+        self.cart = []  
+        self.total = 0.0  
         
         # Widget principal
         main_widget = QWidget()
@@ -138,7 +138,7 @@ class RestaurantMenu(QMainWindow):
         category_bar.setLayout(category_layout)
         main_layout.addWidget(category_bar)
 
-        # Área de productos (se inicializa con la categoría "Bebidas")
+       
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         scroll_content = QWidget()
@@ -164,15 +164,15 @@ class RestaurantMenu(QMainWindow):
 
         bottom_layout.addStretch()
 
-        # Mostrar el total
+       
         self.total_label = QLabel(f"Total: ${self.total}")
         bottom_layout.addWidget(self.total_label)
 
-        # Botón de finalizar orden
+        
         finish_button = QPushButton("Finalizar Orden")
         finish_button.setObjectName("finishButton")
         finish_button.setFixedSize(200, 40)
-        finish_button.clicked.connect(self.finalize_order)  # Conectar evento de finalizar compra
+        finish_button.clicked.connect(self.finalize_order) 
         bottom_layout.addWidget(finish_button)
 
         bottom_bar.setLayout(bottom_layout)
@@ -218,20 +218,20 @@ class RestaurantMenu(QMainWindow):
         """Agregar el producto al carrito y actualizar el total"""
         self.cart.append((name, price))
         self.total += price
-        self.total_label.setText(f"Total: ${self.total:.2f}")  # Actualizar el total mostrado
+        self.total_label.setText(f"Total: ${self.total:.2f}") 
 
     def finalize_order(self):
         """Mostrar el resumen de la compra y el total"""
-        # Crear un mensaje con los productos y el total
+  
         product_list = "\n".join([f"{name} - ${price}" for name, price in self.cart])
         message = f"Has pedido:\n{product_list}\n\nTotal: ${self.total:.2f}"
         
-        # Crear el cuadro de mensaje
+      
         msg_box = QMessageBox()
         
-        # Establecer el ícono con la imagen "Palapa.jpg"
-        custom_icon = QIcon("Palapa.jpg")  # Usar "Palapa.jpg" como ícono
-        msg_box.setIconPixmap(custom_icon.pixmap(QSize(50, 50)))  # Ajustar el tamaño del ícono
+     
+        custom_icon = QIcon("Palapa.jpg")  
+        msg_box.setIconPixmap(custom_icon.pixmap(QSize(50, 50))) 
 
         msg_box.setWindowTitle("Resumen de la Orden")
         msg_box.setText(message)
