@@ -1,8 +1,8 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QLabel, QFrame, QScrollArea)
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QFont, QPixmap, QIcon
 
 class ProductCard(QFrame):
     def __init__(self, name, description, price, image_path):
@@ -26,28 +26,34 @@ class ProductCard(QFrame):
             }
         """)
 
+        # Establecer el ancho fijo de las tarjetas más estrechas
+        self.setFixedWidth(400)
+
         layout = QVBoxLayout()
         
         # Nombre del platillo
         name_label = QLabel(name)
         name_label.setFont(QFont("Arial", 12, QFont.Bold))
+        name_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(name_label)
 
         # Descripción
         desc_label = QLabel(description)
         desc_label.setWordWrap(True)
+        desc_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(desc_label)
 
         # Imagen del platillo
         image_placeholder = QLabel()
         image = QPixmap(image_path)  # Cargar la imagen desde el archivo
-        image_placeholder.setPixmap(image.scaled(200, 150, Qt.KeepAspectRatio))  # Escalar la imagen al tamaño deseado
+        image_placeholder.setPixmap(image.scaled(150, 100, Qt.KeepAspectRatio))  # Escalar la imagen al tamaño deseado
         image_placeholder.setAlignment(Qt.AlignCenter)
         layout.addWidget(image_placeholder)
 
         # Precio
         price_label = QLabel(f"Precio ${price}")
         price_label.setFont(QFont("Arial", 11, QFont.Bold))
+        price_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(price_label)
 
         # Botón de pedir
@@ -97,25 +103,42 @@ class RestaurantMenu(QMainWindow):
         category_bar = QWidget()
         category_bar.setObjectName("categoryBar")
         category_layout = QHBoxLayout()
+
+        # Definir las categorías con las rutas de las imágenes pequeñas
+        categories = [
+            ("Bebidas", "Refresco.webp"), 
+            ("Pescados", "Pescado.webp"), 
+            ("Camarones", "Camarones.webp")
+        ]
         
-        # Categorías
-        categories = ["Bebidas", "Pescados", "Camarones"]
+        # Crear los botones con las imágenes
         self.category_buttons = []
-        for category in categories:
+        for category, image_path in categories:
             button = QPushButton(category)
             button.setObjectName("categoryButton")
-            button.clicked.connect(self.on_category_clicked)  # Conectar el evento de click
-            self.category_buttons.append(button)
+            button.clicked.connect(self.on_category_clicked)  # Conectar evento click
+
+            # Cargar y establecer el ícono pequeño
+            pixmap = QPixmap(image_path)  # Cargar la imagen desde el archivo
+            if pixmap.isNull():
+                print(f"Error al cargar la imagen: {image_path}")
+            else:
+                icon = QIcon(pixmap)  # Convertir a ícono
+                button.setIcon(icon)  # Establecer el ícono del botón
+                button.setIconSize(QSize(30, 30))  # Ajustar el tamaño del ícono (pequeño)
+                
             category_layout.addWidget(button)
+            self.category_buttons.append(button)
         
         category_bar.setLayout(category_layout)
         main_layout.addWidget(category_bar)
 
-        # Área de productos
+        # Área de productos (se inicializa con la categoría "Bebidas")
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         scroll_content = QWidget()
         self.products_layout = QHBoxLayout()
+        self.products_layout.setSpacing(10)  # Espacio entre las tarjetas
 
         # Inicializar con productos de Bebidas
         self.update_product_cards("Bebidas")
@@ -124,7 +147,7 @@ class RestaurantMenu(QMainWindow):
         self.scroll.setWidget(scroll_content)
         main_layout.addWidget(self.scroll)
 
-        # Barra inferior
+        # Barra inferior (como antes)
         bottom_bar = QWidget()
         bottom_layout = QHBoxLayout()
         
