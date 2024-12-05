@@ -1,32 +1,97 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QPushButton, QLabel, QFrame, QScrollArea)
-from PyQt5.QtCore import Qt, QSize
+                             QHBoxLayout, QPushButton, QLabel, QFrame, QScrollArea, QGraphicsDropShadowEffect)
+from PyQt5.QtCore import Qt, QSize, pyqtSignal, QThread
 from PyQt5.QtGui import QFont, QPixmap, QIcon
+import speech_recognition as sr
+import index
+
+
+
+
+
+class SpeechRecognitionThread(QThread):
+    recognized_text = pyqtSignal(str)  # Señal para enviar el texto reconocido a la interfaz gráfica
+
+    def __init__(self):
+        super().__init__()
+        self.running = True  # Bandera para detener el hilo si es necesario
+
+    def run(self):
+        bot = "ultron"
+
+        # Crear un archivo de audio de bienvenida
+        index.crearAudio(f'Hola, soy {bot}. Puedes llamarme por mi nombre si necesitas algo, si no sabes qué puedo hacer, solo di comandos.', "mensaje.mp3")
+
+        while self.running:
+            phrase = self.fn_speech_recognition()
+            print("Escuche: " + phrase)
+            if bot in phrase.lower():
+                index.crearAudio("¿En qué te puedo ayudar?", 'pregunta.mp3')
+                search_query = self.fn_speech_recognition("Diga su solicitud:")
+
+                if "leer el menú" in search_query.lower():
+                    index.crearAudio("Claro, te leeré el menú", "pedido.mp3")
+                    index.leerMenu(1)
+            elif "comandos" in phrase.lower():
+                index.crearAudio("Los comandos que puedo ejecutar son leer el menú, pedir un platillo, finalizar orden, leer tu pedido.", "ayuda.mp3")
+            
+
+    def fn_speech_recognition(self, prompt_message="Escuchando..."):
+        r = sr.Recognizer()
+        r.energy_threshold = 10000
+        r.dynamic_energy_threshold = False
+
+        with sr.Microphone() as source:
+            print(prompt_message)
+            r.adjust_for_ambient_noise(source)
+            audio = r.listen(source)
+
+            try:
+                phrase = r.recognize_google(audio, language="es-ES")
+                return phrase
+            except sr.UnknownValueError:
+                return "No entendí lo que dijiste."
+            except sr.RequestError as e:
+                return f"Error de reconocimiento: {e}"
+
+    def stop(self):
+        self.running = False  # Detiene el hilo
+
 
 class ProductCard(QFrame):
     def __init__(self, name, description, price, image_path):
         super().__init__()
         self.setObjectName("productCard")
+        
+        # Establecer el estilo básico de la tarjeta sin el borde azul
         self.setStyleSheet("""
             #productCard {
-                background-color: #B3E5FC;
+                background-color: #B3E5FC;  /* Fondo azul para las tarjetas */
                 border-radius: 15px;
                 padding: 10px;
                 margin: 10px;
             }
+            QLabel {
+                color: #000000;  /* Asegurarse de que el texto de las etiquetas sea negro */
+                background-color: rgba(255, 255, 255, 0.0);  /* Fondo blanco semi-transparente para mejorar la legibilidad */
+                border-radius: 5px;  /* Bordes redondeados en las etiquetas */
+                padding: 5px;  /* Relleno alrededor del texto */
+            }
             QPushButton {
                 background-color: #FFE082;
                 border-radius: 5px;
-                padding: 5px;
+                padding: 10px;
                 font-weight: bold;
+                color: #000000;  /* Texto negro para los botones */
+                border: 1px solid #FF9800;  /* Borde naranjo para los botones */
             }
             QPushButton:hover {
                 background-color: #FFD54F;
             }
         """)
 
-        # Establecer el ancho fijo de las tarjetas más estrechas
+        # Establecer el ancho fijo de las tarjetas
         self.setFixedWidth(400)
 
         layout = QVBoxLayout()
@@ -60,7 +125,18 @@ class ProductCard(QFrame):
         order_button = QPushButton("Pedir")
         layout.addWidget(order_button)
 
+        # Aplicar sombra a la tarjeta
+        self.apply_shadow_effect(self)
+
         self.setLayout(layout)
+
+    def apply_shadow_effect(self, widget):
+        """Aplicar sombra a un widget."""
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(15)  # Ajustar el radio de difuminado de la sombra
+        shadow_effect.setOffset(5, 5)  # Ajustar el desplazamiento de la sombra
+        shadow_effect.setColor(Qt.black)  # Establecer el color de la sombra
+        widget.setGraphicsEffect(shadow_effect)
 
 class RestaurantMenu(QMainWindow):
     def __init__(self):
@@ -71,17 +147,23 @@ class RestaurantMenu(QMainWindow):
                 background-color: white;
             }
             #categoryBar {
-                background-color: #4FC3F7;
-                padding: 10px;
+                background-color: rgba(17, 143, 205, 0.7); 
                 border-radius: 10px;
-                margin: 10px;
+                padding: 10px;
+                position: fixed;  
+                top: 0;  
+                left: 0;  
+                width: 100%;  
+                min-height: 70px;  
+                z-index: 1; 
             }
             QPushButton {
-                background-color: #FFE082;
+                background-color: rgba(255, 224, 128, 1);
                 border-radius: 5px;
                 padding: 8px;
                 font-weight: bold;
                 margin: 0 5px;
+                color: #000000;  /* Texto negro para los botones */
             }
             QPushButton:hover {
                 background-color: #FFD54F;
@@ -93,16 +175,30 @@ class RestaurantMenu(QMainWindow):
                 padding: 10px 20px;
                 font-weight: bold;
             }
+            #bottomBar {
+                background-color: rgba(246,190,56,0.9);  /* Fondo naranja para el pie */
+                padding: 10px;
+                border-radius: 10px;
+                margin-top: 10px;
+            }
+            #scrollArea {
+                background-color: #FFFFFF;  /* Fondo blanco para la zona de productos */
+                padding: 10px;
+                border-radius: 10px;
+            }
         """)
 
         # Widget principal
         main_widget = QWidget()
         main_layout = QVBoxLayout()
-        
+        main_layout.setContentsMargins(0, 0, 0, 0)  # Eliminar márgenes del layout principal
+
         # Barra de categorías
         category_bar = QWidget()
         category_bar.setObjectName("categoryBar")
         category_layout = QHBoxLayout()
+        category_layout.setContentsMargins(0, 0, 0, 0)  # Eliminar márgenes de la barra de categorías
+        category_layout.setSpacing(0)  # Eliminar el espacio entre los botones
 
         # Definir las categorías con las rutas de las imágenes pequeñas
         categories = [
@@ -134,22 +230,28 @@ class RestaurantMenu(QMainWindow):
         main_layout.addWidget(category_bar)
 
         # Área de productos (se inicializa con la categoría "Bebidas")
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
+        scroll = QScrollArea()
+        scroll.setObjectName("scrollArea")
+        scroll.setWidgetResizable(True)
+
         scroll_content = QWidget()
         self.products_layout = QHBoxLayout()
+        
         self.products_layout.setSpacing(10)  # Espacio entre las tarjetas
 
         # Inicializar con productos de Bebidas
         self.update_product_cards("Bebidas")
 
         scroll_content.setLayout(self.products_layout)
-        self.scroll.setWidget(scroll_content)
-        main_layout.addWidget(self.scroll)
+        scroll_content.setStyleSheet("background-color: #FFFFFF;") 
+        scroll.setWidget(scroll_content)
+        main_layout.addWidget(scroll)
 
         # Barra inferior (como antes)
         bottom_bar = QWidget()
+        bottom_bar.setObjectName("bottomBar")
         bottom_layout = QHBoxLayout()
+        bottom_layout.setContentsMargins(0, 0, 0, 0)  # Eliminar márgenes del layout inferior
         
         # Logo con PixMap
         logo = QLabel()
@@ -213,6 +315,24 @@ class RestaurantMenu(QMainWindow):
         for name, description, price, image_path in products:
             card = ProductCard(name, description, price, image_path)
             self.products_layout.addWidget(card)
+            
+        self.speech_thread = SpeechRecognitionThread()
+        self.speech_thread.recognized_text.connect(self.handle_recognized_text)
+        self.speech_thread.start()
+            
+    def handle_recognized_text(self, phrase):
+        print(f"Comando recibido: {phrase}")
+        if "bebidas" in phrase.lower():
+            self.update_product_cards("Bebidas")
+        elif "pescados" in phrase.lower():
+            self.update_product_cards("Pescados")
+        elif "camarones" in phrase.lower():
+            self.update_product_cards("Camarones")
+
+    def closeEvent(self, event):
+        self.speech_thread.stop()
+        self.speech_thread.wait()
+        super().closeEvent(event)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
