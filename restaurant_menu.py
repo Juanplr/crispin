@@ -1,11 +1,12 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QPushButton, QLabel, QFrame, QScrollArea)
+                             QHBoxLayout, QPushButton, QLabel, QFrame, QScrollArea, QMessageBox)
 from PyQt5.QtCore import Qt, QSize
 from PyQt5.QtGui import QFont, QPixmap, QIcon
 
+
 class ProductCard(QFrame):
-    def __init__(self, name, description, price, image_path):
+    def __init__(self, name, description, price, image_path, add_to_cart_callback):
         super().__init__()
         self.setObjectName("productCard")
         self.setStyleSheet("""
@@ -25,42 +26,45 @@ class ProductCard(QFrame):
                 background-color: #FFD54F;
             }
         """)
-
-        # Establecer el ancho fijo de las tarjetas más estrechas
+        self.name = name
+        self.price = float(price)  # Asegurarse de que el precio sea un número flotante
+        self.add_to_cart_callback = add_to_cart_callback  # Callback para agregar al carrito
+        
         self.setFixedWidth(400)
-
+        
         layout = QVBoxLayout()
         
-        # Nombre del platillo
         name_label = QLabel(name)
         name_label.setFont(QFont("Arial", 12, QFont.Bold))
         name_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(name_label)
 
-        # Descripción
         desc_label = QLabel(description)
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(desc_label)
 
-        # Imagen del platillo
         image_placeholder = QLabel()
-        image = QPixmap(image_path)  # Cargar la imagen desde el archivo
-        image_placeholder.setPixmap(image.scaled(150, 100, Qt.KeepAspectRatio))  # Escalar la imagen al tamaño deseado
+        image = QPixmap(image_path)
+        image_placeholder.setPixmap(image.scaled(150, 100, Qt.KeepAspectRatio))
         image_placeholder.setAlignment(Qt.AlignCenter)
         layout.addWidget(image_placeholder)
 
-        # Precio
         price_label = QLabel(f"Precio ${price}")
         price_label.setFont(QFont("Arial", 11, QFont.Bold))
         price_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(price_label)
 
-        # Botón de pedir
         order_button = QPushButton("Pedir")
+        order_button.clicked.connect(self.on_order_button_clicked)  # Conectar evento
         layout.addWidget(order_button)
 
         self.setLayout(layout)
+
+    def on_order_button_clicked(self):
+        # Llamar al callback de la ventana principal para agregar el precio al carrito
+        self.add_to_cart_callback(self.name, self.price)
+
 
 class RestaurantMenu(QMainWindow):
     def __init__(self):
@@ -95,41 +99,42 @@ class RestaurantMenu(QMainWindow):
             }
         """)
 
+        # Lista de productos seleccionados
+        self.cart = []  # Aquí almacenamos los productos seleccionados (nombre y precio)
+        self.total = 0.0  # Total inicial
+        
         # Widget principal
         main_widget = QWidget()
         main_layout = QVBoxLayout()
-        
+
         # Barra de categorías
         category_bar = QWidget()
         category_bar.setObjectName("categoryBar")
         category_layout = QHBoxLayout()
 
-        # Definir las categorías con las rutas de las imágenes pequeñas
         categories = [
-            ("Bebidas", "Refresco.webp"), 
-            ("Pescados", "Pescado.webp"), 
+            ("Bebidas", "Refresco.webp"),
+            ("Pescados", "Pescado.webp"),
             ("Camarones", "Camarones.webp")
         ]
-        
-        # Crear los botones con las imágenes
+
         self.category_buttons = []
         for category, image_path in categories:
             button = QPushButton(category)
             button.setObjectName("categoryButton")
-            button.clicked.connect(self.on_category_clicked)  # Conectar evento click
+            button.clicked.connect(self.on_category_clicked)
 
-            # Cargar y establecer el ícono pequeño
-            pixmap = QPixmap(image_path)  # Cargar la imagen desde el archivo
+            pixmap = QPixmap(image_path)
             if pixmap.isNull():
                 print(f"Error al cargar la imagen: {image_path}")
             else:
-                icon = QIcon(pixmap)  # Convertir a ícono
-                button.setIcon(icon)  # Establecer el ícono del botón
-                button.setIconSize(QSize(30, 30))  # Ajustar el tamaño del ícono (pequeño)
-                
+                icon = QIcon(pixmap)
+                button.setIcon(icon)
+                button.setIconSize(QSize(30, 30))
+
             category_layout.addWidget(button)
             self.category_buttons.append(button)
-        
+
         category_bar.setLayout(category_layout)
         main_layout.addWidget(category_bar)
 
@@ -138,40 +143,38 @@ class RestaurantMenu(QMainWindow):
         self.scroll.setWidgetResizable(True)
         scroll_content = QWidget()
         self.products_layout = QHBoxLayout()
-        self.products_layout.setSpacing(10)  # Espacio entre las tarjetas
+        self.products_layout.setSpacing(10)
 
-        # Inicializar con productos de Bebidas
         self.update_product_cards("Bebidas")
 
         scroll_content.setLayout(self.products_layout)
         self.scroll.setWidget(scroll_content)
         main_layout.addWidget(self.scroll)
 
-        # Barra inferior (como antes)
+        # Barra inferior
         bottom_bar = QWidget()
         bottom_layout = QHBoxLayout()
-        
-        # Logo con PixMap
+
         logo = QLabel()
-        logo.setFixedSize(100, 100)  # Tamaño fijo para el logo
-        
-        # Cargar la imagen "Palapa.jpg" y asignarla al QLabel
-        pixmap = QPixmap("Palapa.jpg")  # Asegúrate de que la imagen esté en el mismo directorio que tu script
-        logo.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio))  # Escalar la imagen al tamaño del QLabel
-        
-        # Estilo del logo (puedes cambiarlo si lo prefieres)
+        logo.setFixedSize(100, 100)
+        pixmap = QPixmap("Palapa.jpg")  # Usar la imagen "Palapa.jpg"
+        logo.setPixmap(pixmap.scaled(100, 100, Qt.KeepAspectRatio))
         logo.setStyleSheet("background-color: #FFE082; border-radius: 50%;")
         bottom_layout.addWidget(logo)
-        
-        # Espaciador
+
         bottom_layout.addStretch()
-        
+
+        # Mostrar el total
+        self.total_label = QLabel(f"Total: ${self.total}")
+        bottom_layout.addWidget(self.total_label)
+
         # Botón de finalizar orden
         finish_button = QPushButton("Finalizar Orden")
         finish_button.setObjectName("finishButton")
         finish_button.setFixedSize(200, 40)
+        finish_button.clicked.connect(self.finalize_order)  # Conectar evento de finalizar compra
         bottom_layout.addWidget(finish_button)
-        
+
         bottom_bar.setLayout(bottom_layout)
         main_layout.addWidget(bottom_bar)
 
@@ -180,17 +183,15 @@ class RestaurantMenu(QMainWindow):
 
     def on_category_clicked(self):
         sender = self.sender()
-        category = sender.text()  # Obtener el nombre de la categoría
+        category = sender.text()
         self.update_product_cards(category)
 
     def update_product_cards(self, category):
-        # Limpiar los productos actuales
         for i in reversed(range(self.products_layout.count())):
             widget = self.products_layout.itemAt(i).widget()
             if widget is not None:
                 widget.deleteLater()
 
-        # Definir productos por categoría con imágenes
         if category == "Bebidas":
             products = [
                 ("Coca cola", "Refresco sabor cola muy refrescante.", "26", "Coca.jpg"),
@@ -209,10 +210,33 @@ class RestaurantMenu(QMainWindow):
         else:
             products = []
 
-        # Crear nuevas tarjetas con los productos de la categoría seleccionada
         for name, description, price, image_path in products:
-            card = ProductCard(name, description, price, image_path)
+            card = ProductCard(name, description, price, image_path, self.add_to_cart)
             self.products_layout.addWidget(card)
+
+    def add_to_cart(self, name, price):
+        """Agregar el producto al carrito y actualizar el total"""
+        self.cart.append((name, price))
+        self.total += price
+        self.total_label.setText(f"Total: ${self.total:.2f}")  # Actualizar el total mostrado
+
+    def finalize_order(self):
+        """Mostrar el resumen de la compra y el total"""
+        # Crear un mensaje con los productos y el total
+        product_list = "\n".join([f"{name} - ${price}" for name, price in self.cart])
+        message = f"Has pedido:\n{product_list}\n\nTotal: ${self.total:.2f}"
+        
+        # Crear el cuadro de mensaje
+        msg_box = QMessageBox()
+        
+        # Establecer el ícono con la imagen "Palapa.jpg"
+        custom_icon = QIcon("Palapa.jpg")  # Usar "Palapa.jpg" como ícono
+        msg_box.setIconPixmap(custom_icon.pixmap(QSize(50, 50)))  # Ajustar el tamaño del ícono
+
+        msg_box.setWindowTitle("Resumen de la Orden")
+        msg_box.setText(message)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec_()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
